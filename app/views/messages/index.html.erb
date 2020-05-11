@@ -1,0 +1,38 @@
+ <div class="ui one column doubling stackable grid container">
+  <div class="row">
+    <p id="notice"><%= notice %></p>
+    <div class ="column">
+
+      <table class="ui celled table">
+        <thead>
+          <tr>
+            <th>id</th>
+            <th>Sender</th>
+            <th>Body</th>
+            <th>Posted At</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <% @messages.each do |message| %>
+            <tr>
+              <td><%= message.id %></td>
+              <td><%= message.sender %></td>
+              <td><%= message.body %></td>
+              <td><%=  l(message.posted_at, format: :short) %></td>
+              <td>
+                <%= link_to 'Show', message, class: 'mini ui button teal' %>
+                <%= link_to 'Edit', edit_message_path(message),class: 'mini ui button primary' %>
+                <%= link_to 'Destroy', message, method: :delete, data: { confirm: 'Are you sure?' } ,class: 'mini ui button red'%></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <%= link_to 'New Message', new_message_path, class: "ui button primary" %>
+    </div>
+
+
+  </div>
+</div>
