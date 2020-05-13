@@ -40,22 +40,22 @@ class MessageApp extends React.Component {
       // there is a Message validator on NewMessage component
       console.log("error", e.response.data);
     });
-    if (response) {
-      this.addNewMessage(response.data);
-    }
+    return response.data;
   }
 
   // save and set new local message on state
   postNewLocalMessages = (message) => {
-    this.saveNewMessageLocal(message);
-    const messages = this.sortMessages([...this.state.messages, ...this.getMessagesFromLocal()]);
-    this.setState({ messages: messages });
+    const localMessages = this.saveNewMessageLocal(message);
+    const messages = [message, ...this.state.messages];
+    this.setState({ messages: messages, localMessages: localMessages });
   }
 
   // save new message, local or port to the server
   saveNewMessage = (message) => {
     if (this.state.onLine) {
-      this.postNewMessage(message);
+      this.postNewMessage(message).then((msg => {
+        this.addNewMessage(msg);
+      }));
     } else {
       this.postNewLocalMessages(message);
     }
@@ -63,16 +63,16 @@ class MessageApp extends React.Component {
 
   // add new message to
   addNewMessage = (message) => {
-    const messages = this.sortMessages([...this.state.messages, message, ...this.getMessagesFromLocal()]);
+    const messages = [message, ...this.state.messages];
     this.setState({ messages: messages });
   }
 
   // save new message on local store and set local messages state
   saveNewMessageLocal = (message) => {
     var localMessages = this.getMessagesFromLocal();
-    localMessages.push(message);
+    localMessages.unshift(message);
     localStorage.setItem('localMessages', JSON.stringify(localMessages));
-    this.setLocalMessages(localMessages);
+    return localMessages;
   }
 
   // set local message state
@@ -93,15 +93,16 @@ class MessageApp extends React.Component {
   }
 
   // swithc on line / off line
-  switchPooling = () => {
+  switchOnLine = () => {
     const onLine = !this.state.onLine
     this.setState({ onLine });
     // if we are on line and there are local message we send them to the server
     if (onLine && this.containsLocalMessages()) {
       this.sendLocalMessages();
     }
+    onLine ? this.buildTimer() : this.clearTimer();
+  }
 
-  };
 
   // send local messages to the server
   sendLocalMessages = () => {
@@ -111,24 +112,35 @@ class MessageApp extends React.Component {
       this.postNewMessage(msg);
       this.setLocalMessages(localMessages);
       this.sendLocalMessages();
+    } else {
+      this.getAllMessages();
     }
+
   }
 
   componentDidMount() {
     // get all message , server + local
     this.getAllMessages();
-    this.interval = setInterval(() => {
-      if (this.state.onLine) {
-        if (!this.state.searchingMessage) {
-          this.getAllMessages();
-        }
+    if (this.state.onLine) {
+      this.buildTimer();
+    }
+  }
+
+  buildTimer = () => {
+    this.timerID = setInterval(() => {
+      if (!this.state.searchingMessage && !this.containsLocalMessages()) {
+        console.group("Searching.....");
+        this.getAllMessages();
       }
     }, 1000);
   }
 
+  clearTimer = () => {
+    clearTimeout(this.timerID);
+  }
+
   render() {
-    const localMessages = this.getMessagesFromLocal();
-    const onLine = this.state.onLine;
+    const { onLine, messages, localMessages } = this.state;
 
     return (
       <div className="container segment">
@@ -142,14 +154,14 @@ class MessageApp extends React.Component {
               <NewMessage onSubmit={this.saveNewMessage} />
             </div>
             <div className="column">
-              <button className={`ui button ${onLine ? "green" : "red"}`} onClick={this.switchPooling} >{onLine ? 'On Line' : 'Off Line'}</button>
+              <button className={`ui button ${onLine ? "green" : "red"}`} onClick={this.switchOnLine} >{onLine ? 'On Line' : 'Off Line'}</button>
             </div>
 
           </div>
           <div className="row">
             <div className="column">
               <h3 className="ui header">Messages</h3>
-              <MessageList messages={this.state.messages} />
+              <MessageList messages={messages} />
             </div>
             <div className="column">
               <h3 className="ui header">Local Messages</h3>
